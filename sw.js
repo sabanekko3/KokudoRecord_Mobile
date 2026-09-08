@@ -1,9 +1,11 @@
 // オフラインで動かすためのサービスワーカー。
 // 画面とデータをすべて端末に保存し、以後はネットに出ない（背景地図のタイルは除く）。
-// 中身を更新したら CACHE の番号を上げる。古いキャッシュは activate で消す。
+// 中身を更新したら js/version.js の APP_VERSION を上げる（キャッシュ名がそれで決まる）。
+// 古いキャッシュは activate で消す。
 "use strict";
 
-const CACHE = "kokudo-v2";
+importScripts("js/version.js");
+const CACHE = "kokudo-v" + APP_VERSION;
 
 // 最初に開いたときにまとめて保存するもの
 const SHELL = [
@@ -11,6 +13,7 @@ const SHELL = [
   "index.html",
   "app.css",
   "manifest.json",
+  "js/version.js",
   "js/graph.js",
   "js/store.js",
   "js/app.js",

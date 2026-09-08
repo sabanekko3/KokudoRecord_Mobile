@@ -125,7 +125,7 @@ def main():
         url = f"http://127.0.0.1:{PORT}/?debug" + ("&" + sys.argv[1] if len(sys.argv) > 1 else "")
         with Browser(url) as b:
             started = b.wait_for('document.getElementById("pct").textContent !== "–"', 60)
-            print(f"起動 {time.time() - t0:.1f} 秒: {'OK' if started else '時間切れ'}")
+            print(f"起動 {time.time() - t0:.1f} 秒: {'OK' if started else '時間切れ'} | 題名: {b.eval('document.title')}")
             print("ログ:", b.eval('(document.getElementById("dbglog") || {}).textContent || ""').strip().replace("\n", " / "))
             fatal = b.eval('(document.getElementById("fatal") || {}).textContent || ""')
             rows = b.eval('document.querySelectorAll("#list .row").length')

@@ -956,10 +956,22 @@ async function importCsv(file) {
 
 // ---- 起動 --------------------------------------------------------------------
 async function main() {
-  dbg("起動");
+  // 版を題名に出す。古いキャッシュが配られているかどうかを画面で見分けるため
+  document.title = `国道走破マップ v${APP_VERSION}`;
+  document.querySelector("h1").textContent = `国道走破マップ v${APP_VERSION}`;
+  dbg(`起動 v${APP_VERSION}`);
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !PARAMS.has("nosw")) {
-    navigator.serviceWorker.register("sw.js").then(() => dbg("サービスワーカー登録")).catch(err => dbg("サービスワーカー失敗: " + err));
+    // 新しい sw.js が入って切り替わったら読み直す。切り替わる前に読んだ画面は古いままなので
+    // （初回の登録でも controllerchange は起きるが、そのときは読み直さない）
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadController) location.reload();
+    });
+    // updateViaCache: "none" … 更新の確認で sw.js と importScripts の version.js を HTTP キャッシュに
+    // 通さない。既定（imports）だと古い version.js が返って更新に気づけないことがある
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+      .then(() => dbg("サービスワーカー登録")).catch(err => dbg("サービスワーカー失敗: " + err));
   }
 
   // 設定の初期値
@@ -1031,7 +1043,7 @@ async function main() {
 
   // 「オフライン用に全部保存」
   const about = $("about");
-  about.innerHTML = `道路データ ${esc(INDEX.version)} 版・${INDEX.routes.length} 路線<br>` +
+  about.innerHTML = `アプリ v${APP_VERSION}・道路データ ${esc(INDEX.version)} 版・${INDEX.routes.length} 路線<br>` +
     `<button class="btn" type="button" id="cacheAll">全路線を端末に保存（オフライン用）</button><span id="cacheState"></span>`;
   $("cacheAll").addEventListener("click", async () => {
     const sw = navigator.serviceWorker && navigator.serviceWorker.controller;

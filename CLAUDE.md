@@ -26,6 +26,7 @@ app.css              見た目。760px 以下は地図が全画面で、パネ�
 js/graph.js          計算。RouteGraph（Dijkstra・最近傍）、区間の解釈、走破辺の集合、線の切り分け
 js/store.js          IndexedDB の記録と、routes.csv / michinoeki.csv との相互変換
 js/app.js            Leaflet と DOM。起動、描画、注記 canvas、ポップアップ、記録タブ、CSV の入出力
+js/version.js        アプリの版（APP_VERSION）。題名とサービスワーカーのキャッシュ名に使う
 sw.js                サービスワーカー。画面とデータを端末に保存してオフラインで動かす
 manifest.json        ホーム画面に追加するための情報
 icons/               アイコン（tools/make_icons.py が描く）
@@ -97,7 +98,10 @@ way は `[x0, y0, dx1, dy1, ...]` の差分列（`Graph.decodeWay`）。lines.js
 - 「全路線を端末に保存」ボタンが `cacheAll` メッセージで残りを全部入れる（25MB）
 - 同一オリジンの GET だけ扱う。地図タイル（国土地理院）は素通し。既定の背景は
   オフラインなら「背景なし」、オンラインなら白地図
-- **中身を更新したら `CACHE` の名前を上げること。** 上げないと古いものが配られ続ける
+- **中身を更新したら `js/version.js` の `APP_VERSION` を上げること。** キャッシュ名
+  （`kokudo-v` + 版）と画面の題名（国道走破マップ v0.2）がそれで決まる。上げないと古いものが
+  配られ続ける。題名の版で、端末に届いているものが分かる
+- 新しい sw.js に切り替わると（`controllerchange`）画面を自動で読み直す。初回登録では読み直さない
 
 ### 描画（PC 版から移植）
 

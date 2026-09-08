@@ -37,8 +37,8 @@ python -m http.server 8000      手元で開く（http://localhost:8000/）
 （サービスワーカーと fetch が `file://` では動きません）。
 URL に `?debug` を付けると進み具合が画面の下に出ます。
 
-道路データを更新したら `sw.js` の `CACHE` の番号を上げてから push してください。
-上げないと端末に古いものが残ります。
+画面や道路データを更新したら `js/version.js` の `APP_VERSION` を上げてから push してください。
+上げないと端末に古いものが残ります。届いた版は題名の「v0.2」で分かります。
 
 設計と注意点は [CLAUDE.md](CLAUDE.md)、画面と操作の仕様は [docs/仕様.md](docs/仕様.md) にあります。
 
