@@ -135,6 +135,15 @@ def main():
                   "| 一覧:", rows, "行")
             ok = started and not fatal and rows > 400
 
+            # 3.4 使い方: 「?」で開き、× で閉じる
+            b.eval('document.querySelector(".help-btn").click(); 0')
+            opened = not b.eval('document.getElementById("help").hidden')
+            b.eval('document.querySelector("[data-help-close]").click(); 0')
+            closed = b.eval('document.getElementById("help").hidden')
+            print("使い方:", "開く" if opened else "開かない", "→", "閉じる" if closed else "閉じない",
+                  "| 見出し:", b.eval('document.querySelectorAll("#help h3").length'), "個")
+            ok = ok and opened and closed
+
             # 3.5 スマホ幅なので下パネルはシート。畳んだ状態で始まり、地図は画面いっぱい
             sheet = b.eval('(() => { const a = document.getElementById("app").clientHeight; '
                            'return { state: sheetState, app: a, map: map.getSize().y, '

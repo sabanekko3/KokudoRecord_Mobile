@@ -145,6 +145,24 @@ h1 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .08em; }
 .legend { padding: 10px 20px 12px; border-top: 1px solid var(--rule); font-size: 10.5px; color: var(--muted); line-height: 1.8; }
 .legend i { display: inline-block; width: 18px; height: 3px; margin-right: 5px; vertical-align: 2px; }
 
+/* 使い方 */
+.leaflet-bar a.help-btn { font-weight: 700; font-size: 17px; }
+#help { position: fixed; inset: 0; z-index: 1200; background: rgba(22, 32, 44, .55); display: flex;
+        align-items: center; justify-content: center; padding: 16px; }
+#help[hidden] { display: none; }
+.help-box { background: #fff; border-radius: 12px; width: 100%; max-width: 520px; max-height: 100%;
+            display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0, 0, 0, .3); }
+.help-head { display: flex; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--rule); }
+.help-head h2 { flex: 1; margin: 0; font-size: 15px; letter-spacing: .06em; }
+.help-close { font: inherit; font-size: 20px; line-height: 1; width: 36px; height: 36px; cursor: pointer;
+              border: 1px solid var(--rule); border-radius: 8px; background: #fff; color: var(--muted); }
+.help-body { overflow-y: auto; padding: 6px 18px 18px; font-size: 12.5px; line-height: 1.75; -webkit-overflow-scrolling: touch; }
+.help-body h3 { margin: 14px 0 4px; font-size: 13px; color: var(--sign-blue); }
+.help-body p, .help-body ul, .help-body ol { margin: 4px 0; }
+.help-body ul, .help-body ol { padding-left: 1.4em; }
+.help-body .sw { display: inline-block; width: 18px; height: 3px; margin-right: 4px; vertical-align: 3px; }
+.help-body .help-foot { margin-top: 14px; color: var(--muted); font-size: 11px; }
+
 /* 起動時のエラー */
 #fatal {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999; background: #d81f26; color: #fff;

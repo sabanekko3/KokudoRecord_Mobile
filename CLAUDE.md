@@ -21,7 +21,7 @@ PC 版（`../国道管理v2/`、`kokudo_map.py`）とは**別物として開発�
 ## ファイル構成
 
 ```
-index.html           画面（1枚）
+index.html           画面（1枚）。使い方（#help）の本文もここ
 app.css              見た目。760px 以下は地図が全画面で、パネルは下から引き出すシート
 js/graph.js          計算。RouteGraph（Dijkstra・最近傍）、区間の解釈、走破辺の集合、線の切り分け
 js/store.js          IndexedDB の記録と、routes.csv / michinoeki.csv との相互変換
@@ -29,7 +29,7 @@ js/app.js            Leaflet と DOM。起動、描画、注記 canvas、ポッ�
 js/version.js        アプリの版（APP_VERSION）。題名とサービスワーカーのキャッシュ名に使う
 sw.js                サービスワーカー。画面とデータを端末に保存してオフラインで動かす
 manifest.json        ホーム画面に追加するための情報
-icons/               アイコン（tools/make_icons.py が描く）
+icons/               アイコン（tools/make_icons.py が描く。国道標識の形の逆三角）
 vendor/              Leaflet 一式（LICENSE.leaflet も）
 data/                tools/export_data.py の出力。git に入れる（配信に要る。33MB）
   index.json           路線一覧（番号・延長・範囲）、総延長、名前の区切り、地点の種類の番号

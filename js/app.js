@@ -105,6 +105,31 @@ const map = L.map("map", { preferCanvas: true }).setView([37.0, 137.5], 6);
 map.attributionControl.setPrefix(false).addAttribution(OSM_CREDIT);
 let baseLayer = null;
 
+// 使い方。＋−の下に「?」を置き、#help を出す
+const HelpControl = L.Control.extend({
+  onAdd: function () {
+    const bar = L.DomUtil.create("div", "leaflet-bar");
+    const a = L.DomUtil.create("a", "help-btn", bar);
+    a.href = "#";
+    a.textContent = "?";
+    a.title = "使い方";
+    a.setAttribute("role", "button");
+    a.setAttribute("aria-label", "使い方");
+    L.DomEvent.on(a, "click", (e) => { L.DomEvent.preventDefault(e); L.DomEvent.stopPropagation(e); showHelp(true); });
+    L.DomEvent.disableClickPropagation(bar);
+    return bar;
+  }
+});
+new HelpControl({ position: "topleft" }).addTo(map);
+function showHelp(open) {
+  $("help").hidden = !open;
+  if (open) $("help").querySelector(".help-body").scrollTop = 0;
+}
+$("help").addEventListener("click", (e) => {
+  if (e.target === $("help") || e.target.closest("[data-help-close]")) showHelp(false);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("help").hidden) showHelp(false); });
+
 function setBasemap(key) {
   if (baseLayer) { map.removeLayer(baseLayer); baseLayer = null; }
   const spec = BASEMAPS[key] || BASEMAPS.none;

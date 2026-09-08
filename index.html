@@ -89,6 +89,54 @@
     </div>
   </aside>
 </div>
+<!-- 使い方。地図左上の「?」で開く。閉じるのは × か暗い部分を押す -->
+<div id="help" hidden>
+  <div class="help-box" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="help-head">
+      <h2 id="helpTitle">使い方</h2>
+      <button type="button" class="help-close" data-help-close="1" aria-label="閉じる">×</button>
+    </div>
+    <div class="help-body">
+      <h3>走った区間を記録する</h3>
+      <ol>
+        <li>地図を拡大すると交差点の印（●◆）が出ます。さらに拡大すると名前も出ます</li>
+        <li>始めの交差点を押し、ポップアップの「ここから」を押します。国道が複数通る交差点では路線ごとにボタンが出ます</li>
+        <li>終わりの交差点を押し、「ここまで」を押します。経路を計算して赤くなります</li>
+      </ol>
+      <p>交差点でない所は道の線そのものを押しても選べます（その場所の緯度経度で記録されます）。
+        路線の端から端まで走ったのに、うまく選べないときは、路線一覧の「全線走破」ボタンで路線ごと記録できます。</p>
+      <h3>記録を見る・直す</h3>
+      <ul>
+        <li>「路線」タブで路線を押すと、その路線だけ濃くなり橙で縁取られます。もう一度押すと戻ります</li>
+        <li>「走破記録」タブに記録が並びます。行を押すとその区間を縁取り、「編集」で日付とメモ、「削除」で消せます</li>
+        <li>下のパネルは、つまみを押すと半分に開き、上に引くと大きくなります。もう一度押すと畳まれます</li>
+      </ul>
+      <h3>地図の見方</h3>
+      <ul>
+        <li><span class="sw" style="background:var(--done)"></span> 走破済み　<span class="sw" style="background:var(--todo)"></span> 未走破</li>
+        <li><b style="color:#0b3f8f">●</b> 信号交差点　<b style="color:#0f7b4f">◆</b> 国道どうしの交点　<b style="color:#111827">◆</b> 路線の端</li>
+        <li><b style="color:var(--done)">★</b> 道の駅（「≡」→「道の駅を出す」）。星を押して「行った」で訪問を記録します</li>
+        <li>交差点名の横の <b style="color:#0b3f8f">R17/104.6</b> は、国道17号の起点から 104.6 km の意味です</li>
+      </ul>
+      <h3>設定（右上の「≡」）</h3>
+      <ul>
+        <li>背景の地図はネットがあるときだけ出ます。圏外では「背景なし」にしてください</li>
+        <li>「未走破の国道も描く」を外すと、走った道だけが残ります</li>
+      </ul>
+      <h3>記録の保存と持ち出し</h3>
+      <ul>
+        <li>記録はこの端末のブラウザの中だけに保存されます。どこにも送られません。他の人が同じ URL を開いても、その人の端末に別の記録ができます</li>
+        <li>ブラウザのデータを消すと記録も消えます。ときどき「≡」→「routes.csv を書き出す」で控えを取ってください。
+          書き出した CSV は PC 版でそのまま読めます</li>
+        <li>「CSV を読み込む」は、いまの記録を CSV の内容で置き換えます</li>
+      </ul>
+      <h3>圏外で使う</h3>
+      <p>一度開けば、画面と全国の線は端末に残ります。「≡」→「全路線を端末に保存」を押しておくと、
+        どの路線でも圏外で記録できます（約 25MB）。背景の地図は残りません。</p>
+      <p class="help-foot">版は題名の「v0.x」で分かります。更新があるとネット接続時に自動で新しくなります。</p>
+    </div>
+  </div>
+</div>
 <script src="vendor/leaflet.js"></script>
 <script src="js/version.js"></script>
 <script src="js/graph.js"></script>
