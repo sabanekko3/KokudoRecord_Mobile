@@ -134,6 +134,29 @@ def main():
                   "| 一覧:", rows, "行")
             ok = started and not fatal and rows > 400
 
+            # 3.5 スマホ幅なので下パネルはシート。畳んだ状態で始まり、地図は画面いっぱい
+            sheet = b.eval('(() => { const a = document.getElementById("app").clientHeight; '
+                           'return { state: sheetState, app: a, map: map.getSize().y, '
+                           'side: document.getElementById("side").getBoundingClientRect().height }; })()')
+            print(f"シート: {sheet['state']} 高さ {sheet['side']:.0f}px / 地図 {sheet['map']}px / 画面 {sheet['app']}px")
+            ok = ok and sheet["state"] == "peek" and sheet["map"] == sheet["app"] and sheet["side"] < sheet["app"] * 0.3
+            g = b.eval('(() => { const r = document.getElementById("grip").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()')
+            b.call("Input.dispatchMouseEvent", type="mousePressed", x=g[0], y=g[1], button="left", clickCount=1)
+            b.call("Input.dispatchMouseEvent", type="mouseReleased", x=g[0], y=g[1], button="left", clickCount=1)
+            time.sleep(0.4)
+            half = b.eval('[sheetState, document.getElementById("side").getBoundingClientRect().height, '
+                          'document.querySelectorAll("#list .row").length > 0 && document.getElementById("list").getBoundingClientRect().height]')
+            print(f"つまみを押す → {half[0]} 高さ {half[1]:.0f}px、一覧の高さ {half[2]:.0f}px")
+            ok = ok and half[0] == "half" and abs(half[1] - sheet["app"] * 0.55) < 3 and half[2] > 150
+            b.eval('setSheet("full"); 0'); time.sleep(0.4)
+            full = b.eval('[sheetState, document.getElementById("side").getBoundingClientRect().height, document.getElementById("list").getBoundingClientRect().height]')
+            print(f"full → 高さ {full[1]:.0f}px、一覧の高さ {full[2]:.0f}px")
+            ok = ok and abs(full[1] - sheet["app"] * 0.92) < 3 and full[2] > sheet["app"] * 0.5
+            b.eval('document.querySelector("#list .row").click(); 0'); time.sleep(0.4)
+            print("一覧の1行目を押す →", b.eval('sheetState'), "| 国道1号を選択:", b.eval('selectedRef'))
+            ok = ok and b.eval('sheetState') == "peek" and b.eval('selectedRef') == "1"
+            b.eval('selectRoute("1"); map.closePopup(); map.setView([37.0, 137.5], 6, { animate: false }); 0')
+
             # 4. 地図のクリック。ヘッドレスの Edge は pointer: coarse を真と言い、CDP の
             #    エミュレーションでは変えられないので、?pointer= で逆の値にして開き直す
             coarse = b.eval("COARSE")

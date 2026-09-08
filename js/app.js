@@ -328,7 +328,8 @@ function render() {
       `<span class="meta"><span class="name">国道${s.ref}号</span><br><span class="sub">${sub}</span></span>`;
     btn.addEventListener("click", () => {
       if (!selectRoute(s.ref)) { map.closePopup(); return; }
-      map.fitBounds(s.bounds, { padding: [30, 30] });
+      showMap();
+      fitVisible(s.bounds);
       L.popup()
         .setLatLng([(s.bounds[0][0] + s.bounds[1][0]) / 2, (s.bounds[0][1] + s.bounds[1][1]) / 2])
         .setContent(popupHtml(s)).openOn(map);
@@ -630,6 +631,78 @@ map.on("zoomstart", () => { zooming = true; clearLabels(); });
 map.on("zoomend", () => { zooming = false; drawLabels(); });
 map.on("resize", () => { sizeLabelCanvas(); drawLabels(); });
 
+// ---- スマホの下パネル（ボトムシート） ------------------------------------------
+// 760px 以下では地図が画面いっぱいで、パネルは下から引き出す。peek（つまみ・走破率・
+// 編集の帯だけ）／half／full を #side のクラスで切り替え、つまみのタップで peek と half を
+// 行き来、ドラッグで好きな高さにして離すと近い段に寄せる。広い画面ではクラスは効かない
+const MOBILE = window.matchMedia("(max-width: 760px)");
+const sideEl = $("side");
+const gripEl = $("grip");
+let sheetState = "peek";
+
+function setSheet(state) {
+  sheetState = state;
+  sideEl.classList.remove("peek", "half", "full");
+  sideEl.classList.add(state);
+  sideEl.style.height = "";
+  gripEl.setAttribute("aria-expanded", String(state !== "peek"));
+}
+// 一覧から地図を見に行くとき。畳んで、すぐ測れるように transition を切る
+function showMap() {
+  if (!MOBILE.matches || sheetState === "peek") return;
+  sideEl.classList.add("dragging");
+  setSheet("peek");
+  void sideEl.offsetHeight;
+  sideEl.classList.remove("dragging");
+}
+// シートが隠している高さ（px）。fitBounds の下側の余白に足す
+function sheetCover() {
+  return MOBILE.matches ? sideEl.getBoundingClientRect().height : 0;
+}
+function fitVisible(bounds) {
+  map.fitBounds(bounds, { paddingTopLeft: [30, 30], paddingBottomRight: [30, 30 + sheetCover()] });
+}
+
+let sheetDrag = null;
+gripEl.addEventListener("pointerdown", (e) => {
+  if (!MOBILE.matches) return;
+  sheetDrag = { y: e.clientY, h: sideEl.getBoundingClientRect().height, moved: false };
+  gripEl.setPointerCapture(e.pointerId);
+  sideEl.classList.add("dragging");
+});
+gripEl.addEventListener("pointermove", (e) => {
+  if (!sheetDrag) return;
+  const dy = sheetDrag.y - e.clientY;
+  if (!sheetDrag.moved) {
+    if (Math.abs(dy) < 6) return;
+    sheetDrag.moved = true;
+    // 畳んだままだと中身が display:none なので、引き上げながら見えるようにしておく
+    sideEl.classList.remove("peek", "half", "full");
+    sideEl.classList.add("half");
+  }
+  sideEl.style.height = Math.max(40, sheetDrag.h + dy) + "px";
+});
+function endSheetDrag() {
+  if (!sheetDrag) return;
+  const moved = sheetDrag.moved;
+  sheetDrag = null;
+  sideEl.classList.remove("dragging");
+  if (!moved) { setSheet(sheetState === "peek" ? "half" : "peek"); return; }
+  const ratio = sideEl.getBoundingClientRect().height / $("app").clientHeight;
+  setSheet(ratio < 0.3 ? "peek" : ratio < 0.72 ? "half" : "full");
+}
+gripEl.addEventListener("pointerup", endSheetDrag);
+gripEl.addEventListener("pointercancel", endSheetDrag);
+gripEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSheet(sheetState === "peek" ? "half" : "peek"); }
+});
+// 題名を押しても開閉する
+document.querySelector(".titlebar > div").addEventListener("click", () => {
+  if (MOBILE.matches) setSheet(sheetState === "peek" ? "half" : "peek");
+});
+setSheet("peek");
+if (MOBILE.matches) map.attributionControl.setPosition("topright");
+
 // ---- 区間の記録 --------------------------------------------------------------
 const editEl = $("edit");
 function showEdit(html) {
@@ -789,7 +862,8 @@ async function showRecord(id) {
   renderRecords();
   const pts = lines.flat();
   const lats = pts.map(p => p[0]), lons = pts.map(p => p[1]);
-  map.fitBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]], { padding: [30, 30] });
+  showMap();
+  fitVisible([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]);
   showEdit(`国道${r.ref}号 <b>${esc(r.section)}</b>（${round1(cov.doneKm)} km）を縁取りしています${CLOSE}`);
 }
 
@@ -901,8 +975,6 @@ async function main() {
     const open = $("menu").hidden;
     $("menu").hidden = !open;
     $("menuBtn").setAttribute("aria-expanded", String(open));
-    $("side").classList.toggle("expanded", open);
-    setTimeout(() => map.invalidateSize(), 50);
   });
   for (const btn of document.querySelectorAll(".filters button")) {
     btn.addEventListener("click", () => {

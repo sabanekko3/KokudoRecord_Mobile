@@ -22,7 +22,7 @@ PC 版（`../国道管理v2/`、`kokudo_map.py`）とは**別物として開発�
 
 ```
 index.html           画面（1枚）
-app.css              見た目。760px 以下で縦並び（地図が上、パネルが下）
+app.css              見た目。760px 以下は地図が全画面で、パネルは下から引き出すシート
 js/graph.js          計算。RouteGraph（Dijkstra・最近傍）、区間の解釈、走破辺の集合、線の切り分け
 js/store.js          IndexedDB の記録と、routes.csv / michinoeki.csv との相互変換
 js/app.js            Leaflet と DOM。起動、描画、注記 canvas、ポップアップ、記録タブ、CSV の入出力
@@ -116,6 +116,9 @@ PC 版の CLAUDE.md にある注意はそのまま当てはまる。特に:
 - 交差点名は `labelPane` の canvas に表示範囲ぶんだけ描く。マーカーは使えない（数万地点）
 - 路線ごとに `L.polyline`（MultiPolyline）を1本ずつ。`routeLayers` に {done, todo} で持つ
 - 1地点に複数の呼び名（`NAME_SEP` 区切り）が付くことがある。区間欄には `split(NAME_SEP)[0]` を書く
+- 760px 以下ではパネルがボトムシート（`#side` に peek／half／full のクラス。`setSheet()`）。
+  地図は `#side` の下にも広がっているので `invalidateSize()` は要らない。地図に寄せるときは
+  `showMap()` で畳んでから `fitVisible()`（シートの高さぶん下に余白）を使う
 
 ### 動作確認のしかた
 
