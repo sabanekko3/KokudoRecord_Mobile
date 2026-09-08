@@ -177,6 +177,11 @@ def main():
             print("走破率:", pct, "| 記録:", n, "件 | 国道116号:",
                   b.eval('JSON.stringify(summary.get("116").status + " " + summary.get("116").doneKm)'))
             ok = ok and n == 1 and pct != "0.0"
+            # 描画順: 赤（走破済み）は青（未走破）より後、道の駅はさらに後に描かれている
+            order = b.eval("""(() => { const seq = []; for (let o = featRenderer._drawFirst; o; o = o.next)
+              seq.push(o.layer.kind || "eki"); return seq.filter((k, i) => k !== seq[i - 1]).join(">"); })()""")
+            print("描画順（青→赤→道の駅）:", order)
+            ok = ok and order in ("todo>eki", "todo>done>eki", "todo>done")
 
             b.eval('showTab("records")')
             print("記録タブ:", b.eval('document.querySelectorAll("#paneRecords .rec").length'), "件")

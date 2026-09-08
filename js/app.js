@@ -162,6 +162,14 @@ function setRouteLines(ref, doneLines, todoLines) {
   };
   routeLayers.set(ref, { done: make(doneLines, "done", doneStyle(ref)),
                          todo: make(todoLines, "todo", todoStyle(ref)) });
+  raiseDone();
+}
+
+// 赤（走破済み）と道の駅を青（未走破）より上に描く。キャンバスは追加した順に描くので、
+// 置き直した青線は末尾に付き、重複区間で他路線の赤の上に乗ってしまう。置き直すたびに上げ直す
+function raiseDone() {
+  groupDone.eachLayer(l => l.bringToFront());
+  groupEki.eachLayer(l => l.bringToFront());
 }
 
 // 重ね順を作り直す。未走破 → 走破済み → 道の駅の順で、あとのものが上に来る

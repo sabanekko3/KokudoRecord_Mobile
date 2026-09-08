@@ -119,6 +119,8 @@ PC 版の CLAUDE.md にある注意はそのまま当てはまる。特に:
   map の click に流さない（流すと線のポップアップに置き換わる）
 - 交差点名は `labelPane` の canvas に表示範囲ぶんだけ描く。マーカーは使えない（数万地点）
 - 路線ごとに `L.polyline`（MultiPolyline）を1本ずつ。`routeLayers` に {done, todo} で持つ
+- キャンバスは追加した順に描く。`setRouteLines()` で置き直した青線は末尾に付いて他路線の赤の上に
+  乗るので、置き直すたびに `raiseDone()` で赤と道の駅を `bringToFront()` する（smoke が描画順を見る）
 - 1地点に複数の呼び名（`NAME_SEP` 区切り）が付くことがある。区間欄には `split(NAME_SEP)[0]` を書く
 - 760px 以下ではパネルがボトムシート（`#side` に peek／half／full のクラス。`setSheet()`）。
   地図は `#side` の下にも広がっているので `invalidateSize()` は要らない。地図に寄せるときは
