@@ -28,7 +28,8 @@ window.addEventListener("unhandledrejection", (ev) => {
 
 const $ = (id) => document.getElementById(id);
 // URL に ?debug を付けると進み具合を画面の下に出す（スマホには開発者ツールが無い）。
-// ?nosw はサービスワーカーを登録しない（動作確認用）
+// ?nosw はサービスワーカーを登録しない（動作確認用）。?pointer=fine か coarse で
+// 押したときの当たり幅をマウス用／指用に固定する（既定は端末の申告に従う）
 const PARAMS = new URLSearchParams(location.search);
 function dbg(msg) {
   if (!PARAMS.has("debug")) return;
@@ -48,6 +49,12 @@ const LABEL_MIN_ZOOM = 13;     // この倍率から名前を出す
 // 地点の種類。0=名前付き 1=信号 2=国道の交点 3=路線の端
 const PT_COLOR = ["#8a96a3", "#0b3f8f", "#0f7b4f", "#111827"];
 const PT_SIZE = [2.2, 3, 3.8, 4.2];
+// 指で押すときは当たりを広く取る（マウスなら狭くてよい）
+const COARSE = PARAMS.has("pointer") ? PARAMS.get("pointer") === "coarse"
+  : !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+const NODE_TAP_PX = COARSE ? 24 : 14;   // 地点の印からこの距離（px）までなら、その地点を押したとみなす
+const LINE_TAP_PX = COARSE ? 18 : 6;    // 線の当たり判定の最小幅（px）。40m 相当がこれより狭ければこちらを使う
+const PT_SCALE = COARSE ? 1.35 : 1;     // 印そのものも少し大きく描く
 const STATUS_LABEL = { done: "全線走破", partial: "一部走破", todo: "未走破" };
 
 function esc(text) {
@@ -114,9 +121,11 @@ function setBasemap(key) {
 }
 
 // 線も道の駅も1枚のキャンバスに描く。pane を分けると上のキャンバスが下の線への
-// クリックを飲み込む。1枚なら Leaflet が描画順で当たり判定をしてくれる。
+// クリックを飲み込む。線は interactive にしない（Leaflet の判定は線の幅ぶんしか無く
+// 指には狭い）。押した場所の判定は map の click で routesAtPoint() が自分でやる。
+// 道の駅だけは Leaflet に任せ、bubblingMouseEvents を切って map の click に流さない
 map.createPane("featPane").style.zIndex = 420;
-const featRenderer = L.canvas({ pane: "featPane", padding: 0.3, tolerance: 10 });
+const featRenderer = L.canvas({ pane: "featPane", padding: 0.3 });
 map.createPane("selPane").style.zIndex = 405;
 
 const layerSel = L.featureGroup([], { pane: "selPane" }).addTo(map);
@@ -145,7 +154,7 @@ function setRouteLines(ref, doneLines, todoLines) {
   }
   const make = (lines, kind, style) => {
     if (!lines.length) return null;
-    const pl = L.polyline(lines, Object.assign({ pane: "featPane", renderer: featRenderer }, style));
+    const pl = L.polyline(lines, Object.assign({ pane: "featPane", renderer: featRenderer, interactive: false }, style));
     pl.ref = ref;
     pl.kind = kind;
     (kind === "done" ? groupDone : groupTodo).addLayer(pl);
@@ -339,11 +348,12 @@ function segDist2(p, a, b) {
 }
 
 // その地点を通っている国道をすべて拾う（重複区間で選べるように）。
-// 路線ごとに独立して間引いているので線が数十mずれる。40m 相当を画素に換算する
+// 路線ごとに独立して間引いているので線が数十mずれる。40m 相当を画素に換算し、
+// 指で押すときはそれより広い最小幅（LINE_TAP_PX）を保つ
 function routesAtPoint(latlng) {
   const p = map.latLngToLayerPoint(latlng);
   const mPerPx = 156543.03 * Math.cos(latlng.lat * Math.PI / 180) / Math.pow(2, map.getZoom());
-  const tol = Math.min(25, Math.max(6, 40 / mPerPx));
+  const tol = Math.min(30, Math.max(LINE_TAP_PX, 40 / mPerPx));
   const tol2 = tol * tol;
   const refs = new Set();
   for (const g of [groupDone, groupTodo]) {
@@ -382,13 +392,12 @@ function linePopupHtml(refs) {
   return bits.join("<br>");
 }
 
-for (const g of [groupDone, groupTodo]) {
-  g.on("click", (e) => {
-    lineLatLng = e.latlng;
-    let refs = routesAtPoint(e.latlng);
-    if (!refs.length && e.layer && e.layer.ref) refs = [e.layer.ref];
-    if (refs.length) L.popup().setLatLng(e.latlng).setContent(linePopupHtml(refs)).openOn(map);
-  });
+function openLinePopup(latlng) {
+  lineLatLng = latlng;
+  const refs = routesAtPoint(latlng);
+  if (!refs.length) return false;
+  L.popup().setLatLng(latlng).setContent(linePopupHtml(refs)).openOn(map);
+  return true;
 }
 
 // ---- 道の駅 ------------------------------------------------------------------
@@ -430,7 +439,8 @@ function buildEki() {
   EKI.forEach((e, i) => {
     const been = !!(ekiVisit(i) && ekiVisit(i).date);
     const marker = new StarMarker([e[0], e[1]], Object.assign({
-      pane: "featPane", renderer: featRenderer, color: "#fff", weight: 1.6, opacity: 0.95, lineJoin: "round"
+      pane: "featPane", renderer: featRenderer, bubblingMouseEvents: false,
+      color: "#fff", weight: 1.6, opacity: 0.95, lineJoin: "round"
     }, ekiStyle(been)));
     marker.bindPopup(() => ekiPopup(i));
     groupEki.addLayer(marker);
@@ -465,7 +475,7 @@ const NAME_FONT = '600 11px "BIZ UDPGothic","Noto Sans JP","Yu Gothic UI",sans-s
 const TAG_FONT = '500 9px "BIZ UDPGothic","Noto Sans JP","Yu Gothic UI",sans-serif';
 const TAG_LINE = 10;
 let zooming = false;
-let placed = [];
+let drawn = [];                  // いま画面に描いてある地点 {n, x, y}（押した場所の判定に使う）
 
 function buildNodeIndex() {
   nodeIndex.clear();
@@ -491,7 +501,7 @@ function sizeLabelCanvas() {
 function clearLabels() {
   const size = map.getSize();
   lctx.clearRect(0, 0, size.x, size.y);
-  placed = [];
+  drawn = [];
 }
 function visibleNodes() {
   const b = map.getBounds();
@@ -522,7 +532,8 @@ function drawLabels() {
   const boxes = [];
   for (const n of found) {
     const p = map.latLngToContainerPoint([n[0], n[1]]);
-    const r = PT_SIZE[n[3]] || 2.2;
+    const r = (PT_SIZE[n[3]] || 2.2) * PT_SCALE;
+    drawn.push({ n, x: p.x, y: p.y });
     lctx.beginPath();
     if (n[3] >= 2) {
       lctx.moveTo(p.x, p.y - r); lctx.lineTo(p.x + r, p.y);
@@ -574,21 +585,29 @@ function drawLabels() {
       lctx.fillStyle = "#0b3f8f";
       lctx.fillText(stack[i], tx, y);
     }
-    placed.push({ n, x: p.x, y: p.y });
   }
 }
 
-// 地点の名前を押したら、どの路線の区間端にするかを選ぶ
-map.on("click", (e) => {
-  if (!placed.length) return;
-  const p = map.latLngToContainerPoint(e.latlng);
-  let best = null, bestD = 18 * 18;
-  for (const it of placed) {
+// 押した場所に一番近い地点の印（NODE_TAP_PX 以内）。名前を描けなかった地点も含む
+function nodeAt(p) {
+  let best = null, bestD = NODE_TAP_PX * NODE_TAP_PX;
+  for (const it of drawn) {
     const d = (it.x - p.x) ** 2 + (it.y - p.y) ** 2;
-    if (d < bestD) { bestD = d; best = it; }
+    if (d < bestD) { bestD = d; best = it.n; }
   }
-  if (!best) return;
-  const n = best.n;
+  return best;
+}
+
+// 地図を押したら、近くの地点の印 → 道の線 の順に探す。地点は必ず線の上にあるので、
+// 先に地点を見ないと線のポップアップに取られてしまう
+map.on("click", (e) => {
+  const n = nodeAt(map.latLngToContainerPoint(e.latlng));
+  if (n) openNodePopup(n);
+  else openLinePopup(e.latlng);
+});
+
+// 地点のポップアップ。どの路線の区間端にするかを選ぶ
+function openNodePopup(n) {
   popupNode = n;
   const canon = n[2].split(NAME_SEP)[0];
   const rows = (n[4] || []).map(pair => {
@@ -604,7 +623,7 @@ map.on("click", (e) => {
     `<table style="margin:6px 0 2px;border-collapse:collapse">${rows}</table>` +
     `<span style="font-size:10.5px;color:#6c7a89">${esc(canon)}@${n[0]}/${n[1]}</span>`
   ).openOn(map);
-});
+}
 
 map.on("move", () => { if (!zooming) drawLabels(); });
 map.on("zoomstart", () => { zooming = true; clearLabels(); });

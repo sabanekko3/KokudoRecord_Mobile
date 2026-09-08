@@ -8,6 +8,8 @@
   1. 起動が最後まで通る（赤帯が無い、走破率が数字、路線の一覧が出る）
   2. 記録を足す → 走破率が上がる → 走破記録タブに載る → 消す → 戻る
   3. routes.csv の書き出しが PC 版と同じ形になる
+  4. 地図を本当にクリックして、地点の印の近く → 地点のポップアップ、線の上 → 線のポップアップ、
+     指（pointer: coarse）のときは当たりが広がる
 IndexedDB は毎回まっさらな profile なので、最初は 0% から始まる。
 """
 import os
@@ -21,6 +23,90 @@ from headless import Browser
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP_DIR = os.path.dirname(HERE)
 PORT = 8124
+
+# 地図の中の座標（container point）を画面の座標にして本物のクリックを送る
+# 国道どうしの交点に寄せて、まわり 70px に他の地点が無い地点を選ぶ（近い方が拾われるため）
+PICK_NODE = """(() => {
+  const n0 = NODES.find(n => n[3] === 2 && (n[4] || []).length >= 2);
+  for (const z of [15, 16, 17]) {
+    map.setView([n0[0], n0[1]], z, { animate: false });
+    drawLabels();
+    const size = map.getSize();
+    const d = drawn.find(d => d.x > 60 && d.y > 60 && d.x < size.x - 60 && d.y < size.y - 60
+      && drawn.every(o => o === d || (o.x - d.x) ** 2 + (o.y - d.y) ** 2 >= 70 * 70));
+    if (d) return { name: d.n[2], x: d.x, y: d.y, zoom: z, drawn: drawn.length };
+  }
+  return null;
+})()"""
+# 表示中の路線の線分の中点で、描いてある地点からどれも 30px 以上離れたもの
+PICK_LINE = """(() => {
+  const size = map.getSize();
+  for (const [ref, l] of routeLayers) {
+    const pl = l.todo || l.done;
+    if (!pl || !pl._parts) continue;
+    for (const part of pl._parts) {
+      for (let i = 1; i < part.length; i++) {
+        const m = map.layerPointToContainerPoint(part[i - 1].add(part[i]).divideBy(2));
+        if (m.x < 30 || m.y < 30 || m.x > size.x - 30 || m.y > size.y - 30) continue;
+        if (drawn.every(d => (d.x - m.x) ** 2 + (d.y - m.y) ** 2 >= 30 * 30)) return { ref, x: m.x, y: m.y };
+      }
+    }
+  }
+  return null;
+})()"""
+POPUP = '(document.querySelector(".leaflet-popup-content") || {}).textContent || ""'
+
+
+def click_map(b, x, y):
+    """地図の container point (x, y) を本物のマウスで押す"""
+    r = b.eval('(() => { const r = map.getContainer().getBoundingClientRect(); return [r.left, r.top]; })()')
+    px, py = r[0] + x, r[1] + y
+    b.call("Input.dispatchMouseEvent", type="mouseMoved", x=px, y=py)
+    b.call("Input.dispatchMouseEvent", type="mousePressed", x=px, y=py, button="left", clickCount=1)
+    b.call("Input.dispatchMouseEvent", type="mouseReleased", x=px, y=py, button="left", clickCount=1)
+    time.sleep(0.4)
+
+
+def check_tap(b, coarse):
+    """地図のクリックが地点・線に正しく当たるか。coarse なら指の当たり幅で試す"""
+    tap = b.eval("NODE_TAP_PX")
+    want = 24 if coarse else 14
+    print(f"当たり幅: 地点 {tap}px 線 {b.eval('LINE_TAP_PX')}px（{'指' if coarse else 'マウス'}）")
+    ok = tap == want
+    node = b.eval(PICK_NODE)
+    if not node:
+        print("まわりに何も無い地点が見つからず、地点のクリックは試せなかった")
+        return False
+    off = (tap - 3) / 2 ** 0.5           # 斜めに (tap-3)px ずらしても当たる
+    b.eval("map.closePopup(); 0")
+    click_map(b, node["x"] + off, node["y"] + off)
+    text = b.eval(POPUP)
+    hit = node["name"] in text and "ここから" in text
+    print(f"地点 {node['name']}（倍率 {node['zoom']}）の {tap - 3:.0f}px 横を押す → "
+          f"{'地点のポップアップ' if hit else '外れ: ' + repr(text[:40])}")
+    ok = ok and hit and b.eval("popupNode && popupNode[2]") == node["name"]
+    b.eval("map.closePopup(); 0")
+    click_map(b, node["x"] + tap + 12, node["y"])
+    text = b.eval(POPUP)
+    miss = node["name"] not in text
+    print(f"地点から {tap + 12}px 離して押す → {'地点には当たらない' if miss else '地点に当たってしまう'}")
+    ok = ok and miss
+    line = b.eval(PICK_LINE)
+    if line:
+        b.eval("map.closePopup(); 0")
+        click_map(b, line["x"], line["y"])
+        text = b.eval(POPUP)
+        hit = "この地点を通る国道" in text and f"国道{line['ref']}号" in text
+        print(f"国道{line['ref']}号 の線の上を押す → {'線のポップアップ' if hit else '外れ: ' + text[:40]!r}")
+        ok = ok and hit
+        b.eval("map.closePopup(); 0")
+        click_map(b, line["x"], line["y"] + tap + 15)
+        print("線から離して押す →", "何も出ない" if not b.eval(POPUP) else "何か出た: " + b.eval(POPUP)[:30])
+    else:
+        print("線分が見つからず、線のクリックは試せなかった")
+        ok = False
+    b.eval("map.closePopup(); map.setView([37.0, 137.5], 6, { animate: false }); 0")
+    return ok
 
 
 def main():
@@ -36,7 +122,8 @@ def main():
             except Exception:
                 time.sleep(0.2)
         t0 = time.time()
-        with Browser(f"http://127.0.0.1:{PORT}/?debug" + ("&" + sys.argv[1] if len(sys.argv) > 1 else "")) as b:
+        url = f"http://127.0.0.1:{PORT}/?debug" + ("&" + sys.argv[1] if len(sys.argv) > 1 else "")
+        with Browser(url) as b:
             started = b.wait_for('document.getElementById("pct").textContent !== "–"', 60)
             print(f"起動 {time.time() - t0:.1f} 秒: {'OK' if started else '時間切れ'}")
             print("ログ:", b.eval('(document.getElementById("dbglog") || {}).textContent || ""').strip().replace("\n", " / "))
@@ -46,6 +133,15 @@ def main():
             print("走破率:", b.eval('document.getElementById("pct").textContent'),
                   "| 一覧:", rows, "行")
             ok = started and not fatal and rows > 400
+
+            # 4. 地図のクリック。ヘッドレスの Edge は pointer: coarse を真と言い、CDP の
+            #    エミュレーションでは変えられないので、?pointer= で逆の値にして開き直す
+            coarse = b.eval("COARSE")
+            ok = check_tap(b, coarse) and ok
+            b.call("Page.navigate", url=url + "&pointer=" + ("fine" if coarse else "coarse"))
+            time.sleep(1)
+            b.wait_for('typeof drawn !== "undefined" && document.getElementById("pct").textContent !== "–"', 60)
+            ok = check_tap(b, not coarse) and ok
 
             # 2. 記録を足して消す（国道17号 全線に相当する2地点）
             b.eval('startSection("116", "R116端(南)", "R116端(南)")')
@@ -64,7 +160,15 @@ def main():
             print("routes.csv:", repr(csv[:60]))
             ok = ok and csv.startswith("﻿路線番号,区間,走破日,メモ\n116,R116端(南)〜R116端(北),")
 
-            # 道の駅
+            # 道の駅。星を本当に押すと道の駅のポップアップが出て、線のポップアップに取られない
+            b.eval('document.getElementById("showEki").checked = true; stackLayers(); '
+                   'map.setView([EKI[0][0], EKI[0][1]], 14, { animate: false }); 0')
+            pt = b.eval('map.latLngToContainerPoint([EKI[0][0], EKI[0][1]])')
+            click_map(b, pt["x"], pt["y"])
+            text = b.eval(POPUP)
+            print("道の駅の星を押す →", "道の駅のポップアップ" if text.startswith("道の駅") else "外れ: " + repr(text[:40]))
+            ok = ok and text.startswith("道の駅")
+            b.eval('map.closePopup(); map.setView([37.0, 137.5], 6, { animate: false }); 0')
             b.eval('toggleEki(0)')
             b.wait_for('visits.size === 1', 10)
             print("道の駅:", b.eval('document.getElementById("detail").textContent').split("道の駅")[-1].strip())

@@ -3,7 +3,7 @@
 // 中身を更新したら CACHE の番号を上げる。古いキャッシュは activate で消す。
 "use strict";
 
-const CACHE = "kokudo-v1";
+const CACHE = "kokudo-v2";
 
 // 最初に開いたときにまとめて保存するもの
 const SHELL = [
