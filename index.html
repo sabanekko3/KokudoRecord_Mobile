@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b3f8f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="国道走破">
+<title>国道走破マップ</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <aside id="side">
+    <header>
+      <div class="titlebar">
+        <div>
+          <h1>国道走破マップ</h1>
+          <p class="tagline">走った道を赤で塗る</p>
+        </div>
+        <button id="menuBtn" type="button" aria-expanded="false" title="設定と記録の持ち出し">≡</button>
+      </div>
+    </header>
+    <div class="stats">
+      <div class="bar"><span id="bar"></span></div>
+      <div class="figure"><b id="pct">–</b><small>% 走破（距離）</small></div>
+      <div class="detail" id="detail">読み込んでいます…</div>
+    </div>
+    <div id="edit"></div>
+    <div class="view" id="menu" hidden>
+      <label>
+        <span>背景</span>
+        <select id="basemap">
+          <option value="none">背景なし（オフライン）</option>
+          <option value="blank">白地図（要ネット）</option>
+          <option value="pale">淡色地図（要ネット）</option>
+          <option value="std">標準地図（要ネット）</option>
+          <option value="photo">空中写真（要ネット）</option>
+        </select>
+      </label>
+      <label>
+        <span>濃さ</span>
+        <input type="range" id="opacity" min="0" max="100" step="5" value="55">
+      </label>
+      <label class="check">
+        <input type="checkbox" id="showTodo" checked><span>未走破の国道も描く</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="showNodes" checked><span>交差点名を出す（拡大すると出ます）</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="showEki"><span>道の駅を出す</span>
+      </label>
+      <div class="io">
+        <span>記録</span>
+        <button class="btn" type="button" id="exportRoutes">routes.csv を書き出す</button>
+        <button class="btn" type="button" id="exportEki">michinoeki.csv を書き出す</button>
+        <button class="btn" type="button" id="importBtn">CSV を読み込む</button>
+        <input type="file" id="importFile" accept=".csv,text/csv" hidden>
+      </div>
+      <div class="about" id="about"></div>
+    </div>
+    <div class="tabs" id="tabs">
+      <button data-tab="routes" aria-pressed="true">路線</button>
+      <button data-tab="records" aria-pressed="false">走破記録</button>
+    </div>
+    <div id="paneRoutes">
+      <div class="filters">
+        <button data-filter="all" aria-pressed="true">すべて</button>
+        <button data-filter="done" aria-pressed="false">走破済み</button>
+        <button data-filter="partial" aria-pressed="false">一部</button>
+        <button data-filter="todo" aria-pressed="false">未走破</button>
+      </div>
+      <div id="list"></div>
+    </div>
+    <div id="paneRecords" hidden></div>
+    <div class="legend">
+      <div><i style="background:var(--done)"></i>走破済み　<i style="background:var(--todo)"></i>未走破　<b style="color:var(--done)">★</b> 訪問済みの道の駅</div>
+      <div><b style="color:#0b3f8f">●</b> 信号交差点　<b style="color:#0f7b4f">◆</b> 国道どうしの交点　<b style="color:#111827">◆</b> 路線の端</div>
+      <div>交差点名か道の線を押して「ここから」→「ここまで」で記録します</div>
+    </div>
+  </aside>
+</div>
+<script src="vendor/leaflet.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

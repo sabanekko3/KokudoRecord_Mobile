@@ -1,0 +1,17 @@
+{
+  "name": "国道走破マップ",
+  "short_name": "国道走破",
+  "description": "走った国道を赤で塗る。記録は端末の中に保存され、オフラインで動く。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbfcfd",
+  "theme_color": "#0b3f8f",
+  "lang": "ja",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
