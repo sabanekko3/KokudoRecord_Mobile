@@ -315,18 +315,20 @@ function render() {
   }
   const frag = document.createDocumentFragment();
   for (const s of rows) {
-    const btn = document.createElement("button");
-    btn.className = "row";
-    btn.type = "button";
-    btn.dataset.ref = s.ref;
-    btn.setAttribute("aria-pressed", String(s.ref === selectedRef));
+    // 行は div。中に「路線を選ぶ」ボタンと、未走破・一部走破なら「全線走破」ボタン
+    const row = document.createElement("div");
+    row.className = "row";
+    row.dataset.ref = s.ref;
+    row.setAttribute("aria-pressed", String(s.ref === selectedRef));
     const sub = s.status === "partial"
       ? `${s.doneKm.toLocaleString()} / ${s.km.toLocaleString()} km　${esc(s.sections.join("・"))}`
       : `${s.km.toLocaleString()} km`;
-    btn.innerHTML =
+    row.innerHTML =
+      `<button class="row-main" type="button">` +
       `<span class="shield ${s.status}"><span>${s.ref}</span></span>` +
-      `<span class="meta"><span class="name">国道${s.ref}号</span><br><span class="sub">${sub}</span></span>`;
-    btn.addEventListener("click", () => {
+      `<span class="meta"><span class="name">国道${s.ref}号</span><br><span class="sub">${sub}</span></span></button>` +
+      (s.status === "done" ? "" : `<button class="btn full" type="button" data-full="${s.ref}" title="始点から終点まで全部を走破として記録する">全線走破</button>`);
+    row.querySelector(".row-main").addEventListener("click", () => {
       if (!selectRoute(s.ref)) { map.closePopup(); return; }
       showMap();
       fitVisible(s.bounds);
@@ -334,7 +336,7 @@ function render() {
         .setLatLng([(s.bounds[0][0] + s.bounds[1][0]) / 2, (s.bounds[0][1] + s.bounds[1][1]) / 2])
         .setContent(popupHtml(s)).openOn(map);
     });
-    frag.appendChild(btn);
+    frag.appendChild(row);
   }
   listEl.appendChild(frag);
 }
@@ -745,10 +747,34 @@ async function finishSection(ref, label, text) {
     `国道${ref}号 ${s.doneKm.toLocaleString()} / ${s.km.toLocaleString()} km${CLOSE}`);
 }
 
+// 「全線走破」。地点を選ばずに区間 `全線` の記録を1件足す。始点と終点をうまく
+// 選べない路線のための逃げ道。CSV に「全線」と書くのと同じ
+function askFull(ref) {
+  pending = null;
+  const s = summary.get(ref);
+  const note = s && s.sections.length
+    ? `<span class="hint">いまの ${s.sections.length} 件の区間の記録はそのまま残ります（走破記録タブで消せます）</span>` : "";
+  showEdit(`国道${ref}号 <b>全線</b>（${s ? s.km.toLocaleString() : "?"} km）を走破として記録しますか？${note}` +
+    `<br><button class="btn go" data-full-ok="${ref}">記録する</button><button class="btn" data-cancel="1">やめる</button>`);
+}
+async function recordFull(ref) {
+  showEdit(`国道${ref}号 <b>全線</b> を計算しています…`);
+  const id = await Store.addRecord({ ref, section: Graph.FULL, date: today(), note: "" });
+  records.push({ id, ref, section: Graph.FULL, date: today(), note: "" });
+  await recompute(ref);
+  refreshStats();
+  render();
+  renderRecords();
+  const s = summary.get(ref);
+  showEdit(`国道${ref}号 <b>全線</b> を記録しました<br>` +
+    `国道${ref}号 ${s.doneKm.toLocaleString()} / ${s.km.toLocaleString()} km${CLOSE}`);
+}
+
 // 画面じゅうのボタンをまとめて受ける
 document.addEventListener("click", (ev) => {
   const btn = ev.target.closest("button[data-eki], button[data-start], button[data-finish], " +
                                "button[data-cancel], button[data-pt-start], button[data-pt-finish], " +
+                               "button[data-full], button[data-full-ok], " +
                                "button[data-tab], button[data-rec-go], button[data-rec-edit], " +
                                "button[data-rec-del], button[data-rec-save], button[data-rec-cancel]");
   if (!btn) return;
@@ -780,6 +806,10 @@ document.addEventListener("click", (ev) => {
     const text = `@${lat}/${lon}`, label = `地点(${lat},${lon})`;
     if (btn.hasAttribute("data-pt-start")) startSection(ref, label, text);
     else finishSection(ref, label, text).catch(fail);
+  } else if (btn.hasAttribute("data-full")) {
+    askFull(btn.dataset.full);
+  } else if (btn.hasAttribute("data-full-ok")) {
+    recordFull(btn.dataset.fullOk).catch(fail);
   } else if (btn.hasAttribute("data-tab")) {
     showTab(btn.dataset.tab);
   } else if (btn.hasAttribute("data-rec-go")) {

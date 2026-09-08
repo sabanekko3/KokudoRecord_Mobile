@@ -73,6 +73,7 @@ def check_tap(b, coarse):
     want = 24 if coarse else 14
     print(f"当たり幅: 地点 {tap}px 線 {b.eval('LINE_TAP_PX')}px（{'指' if coarse else 'マウス'}）")
     ok = tap == want
+    b.eval('setSheet("peek"); 0')       # シートが地図を覆っていると押せない
     node = b.eval(PICK_NODE)
     if not node:
         print("まわりに何も無い地点が見つからず、地点のクリックは試せなかった")
@@ -152,7 +153,7 @@ def main():
             full = b.eval('[sheetState, document.getElementById("side").getBoundingClientRect().height, document.getElementById("list").getBoundingClientRect().height]')
             print(f"full → 高さ {full[1]:.0f}px、一覧の高さ {full[2]:.0f}px")
             ok = ok and abs(full[1] - sheet["app"] * 0.92) < 3 and full[2] > sheet["app"] * 0.5
-            b.eval('document.querySelector("#list .row").click(); 0'); time.sleep(0.4)
+            b.eval('document.querySelector("#list .row .row-main").click(); 0'); time.sleep(0.4)
             print("一覧の1行目を押す →", b.eval('sheetState'), "| 国道1号を選択:", b.eval('selectedRef'))
             ok = ok and b.eval('sheetState') == "peek" and b.eval('selectedRef') == "1"
             b.eval('selectRoute("1"); map.closePopup(); map.setView([37.0, 137.5], 6, { animate: false }); 0')
@@ -182,6 +183,23 @@ def main():
             csv = b.eval('Store.routesCsv(records)')
             print("routes.csv:", repr(csv[:60]))
             ok = ok and csv.startswith("﻿路線番号,区間,走破日,メモ\n116,R116端(南)〜R116端(北),")
+
+            # 全線走破ボタン（一覧の行 → 帯で確認 → 記録）
+            FULL_BTN = """document.querySelector('#list .row[data-ref="116"] button[data-full]')"""
+            b.eval('setSheet("full"); filter = "all"; render(); 0')
+            b.eval(FULL_BTN + ".click(); 0")
+            ask = b.eval('document.getElementById("edit").textContent')
+            print("全線走破を押す →", ask.strip()[:50])
+            ok = ok and "記録しますか" in ask
+            b.eval("""document.querySelector('#edit button[data-full-ok]').click(); 0""")
+            b.wait_for('summary.get("116").status === "done"', 30)
+            print("記録する →", b.eval('summary.get("116").status'), "| 記録:", b.eval('JSON.stringify(records.map(r => r.section))'),
+                  "| 行のボタン:", "残っている" if b.eval("!!" + FULL_BTN) else "消えた")
+            ok = ok and b.eval('records.length') == 2 and b.eval('records[1].section') == "全線" and not b.eval("!!" + FULL_BTN)
+            b.eval('window.confirm = () => true')
+            b.eval('deleteRecord(records[1].id)')
+            b.wait_for('records.length === 1 && summary.get("116").status === "partial"', 30)
+            b.eval('setSheet("peek"); 0')
 
             # 道の駅。星を本当に押すと道の駅のポップアップが出て、線のポップアップに取られない
             b.eval('document.getElementById("showEki").checked = true; stackLayers(); '
