@@ -29,7 +29,10 @@ js/app.js            Leaflet と DOM。起動、描画、注記 canvas、ポッ�
 js/version.js        アプリの版（APP_VERSION）。題名とサービスワーカーのキャッシュ名に使う
 sw.js                サービスワーカー。画面とデータを端末に保存してオフラインで動かす
 manifest.json        ホーム画面に追加するための情報
-icons/               アイコン（tools/make_icons.py が描く。国道標識の形の逆三角）
+icons/               アイコン。tools/make_icons.py が国道標識の逆三角（白縁・青）を描き、icons/japan.png
+                     （透明な地に白い日本列島。作者が用意）を真ん中に載せる。位置と大きさは ART_* で調整。
+                     文字は TEXTS（文字列・大きさ・位置・anchor・色・フォント）に足す。既定は左上の「国道」。
+                     フォントは ctypes 経由の GDI で描くので Windows でだけ入る（他の OS では文字を飛ばす）
 vendor/              Leaflet 一式（LICENSE.leaflet も）
 data/                tools/export_data.py の出力。git に入れる（配信に要る。33MB）
   index.json           路線一覧（番号・延長・範囲）、総延長、名前の区切り、地点の種類の番号
