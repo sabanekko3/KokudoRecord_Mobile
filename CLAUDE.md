@@ -39,9 +39,11 @@ data/                tools/export_data.py の出力。git に入れる（配信�
   lines.json           全路線の間引いた線（起動時に全国を描く）
   nodes.json           地図に出す地点 [緯度, 経度, 名前, 種類, [[路線番号, km], ...]]（PC 版と同じ）
   eki.json             道の駅 [緯度, 経度, 名前, 都道府県]
+  outline.json         海岸線と県境（国土地理院「地球地図日本」。tools/export_outline.py。0.9MB）
   routes/r{ref}.json   1路線の形状とグラフ。記録のある路線だけ読む
 tools/
   export_data.py       PC 版の導出データから data/ を作る
+  export_outline.py    地球地図日本の shapefile から data/outline.json を作る（zip は自動で取る）
   compare.py           同じ routes.csv を PC 版と JS で解いて辺の集合と km を突き合わせる
   smoke.py             ヘッドレス Edge で起動・記録・削除・再読み込みを通す
   headless.py          DevTools Protocol の最小クライアント（smoke.py が使う）
@@ -160,8 +162,10 @@ PC 版の CLAUDE.md にある注意はそのまま当てはまる。特に:
   国土地理院のタイルは Cache-Control 無し・Last-Modified 付きなので、ブラウザが経験則
   （経過日数の 1 割、数週間）で HTTP キャッシュから返す。オンラインで見た範囲・倍率のタイル
   だけが残り、それ以外は真っ白。アプリ側は関与していない（sw.js は他オリジンを素通し、
-  設定の `basemap` は localStorage に残る）。海岸線と県境を同梱して canvas に描けば
-  オフラインでも形が分かる（1〜2MB の見込み。未着手）
+  設定の `basemap` は localStorage に残る）
+- 代わりに海岸線と県境（data/outline.json、1:100 万）を `outlinePane`（タイルの上・線の下）に
+  描く。出すのは「背景なし」か圏外か、タイルが `tileerror` を出したとき（`updateOutline()`）。
+  ひとまとまりのタイルが全部取れたら引っ込める。出典は出している間だけ attribution に付く
 - 実機では起動とオフライン表示まで確認済み。記録の操作感や、古い端末での重さ
   （lines.json 5MB を L.polyline 459 本で描く）はまだ使い込んでいない
 - iOS Safari は IndexedDB を長期間使わないと消すことがある。CSV の書き出しを控えにする

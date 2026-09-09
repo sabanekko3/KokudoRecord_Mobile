@@ -31,6 +31,7 @@ const SHELL = [
   "data/lines.json",
   "data/nodes.json",
   "data/eki.json",
+  "data/outline.json",
 ];
 
 self.addEventListener("install", (ev) => {

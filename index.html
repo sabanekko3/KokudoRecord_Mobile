@@ -59,6 +59,9 @@
       <label class="check">
         <input type="checkbox" id="showEki"><span>道の駅を出す</span>
       </label>
+      <label class="check">
+        <input type="checkbox" id="showOutline" checked><span>海岸線と県境を描く（背景なし・圏外のとき）</span>
+      </label>
       <div class="io">
         <span>記録</span>
         <button class="btn" type="button" id="exportRoutes">routes.csv を書き出す</button>
@@ -120,7 +123,7 @@
       </ul>
       <h3>設定（右上の「≡」）</h3>
       <ul>
-        <li>背景の地図はネットがあるときだけ出ます。圏外では「背景なし」にしてください</li>
+        <li>背景の地図はネットがあるときだけ出ます。圏外や「背景なし」のときは、代わりに海岸線と県境を薄く描きます</li>
         <li>「未走破の国道も描く」を外すと、走った道だけが残ります</li>
       </ul>
       <h3>記録の保存と持ち出し</h3>
@@ -132,7 +135,7 @@
       </ul>
       <h3>圏外で使う</h3>
       <p>一度開けば、画面と全国の線は端末に残ります。「≡」→「全路線を端末に保存」を押しておくと、
-        どの路線でも圏外で記録できます（約 25MB）。背景の地図は残りません。</p>
+        どの路線でも圏外で記録できます（約 25MB）。背景の地図は残りませんが、海岸線と県境は描きます。</p>
       <p class="help-foot">版は題名の「v0.x」で分かります。更新があるとネット接続時に自動で新しくなります。</p>
     </div>
   </div>

@@ -135,6 +135,17 @@ def main():
                   "| 一覧:", rows, "行")
             ok = started and not fatal and rows > 400
 
+            # 3.3 海岸線と県境: オンラインで白地図のときは出ず、背景なしにすると出て出典が付く
+            before = b.eval('map.hasLayer(groupOutline)')
+            b.eval('document.getElementById("basemap").value = "none"; setBasemap("none"); 0')
+            after = b.eval('map.hasLayer(groupOutline)')
+            credit = "地球地図日本" in b.eval('document.querySelector(".leaflet-control-attribution").textContent')
+            print("海岸線と県境:", "白地図では出ない" if not before else "白地図でも出ている",
+                  "→ 背景なしで", "出る" if after else "出ない", "| 出典:", "あり" if credit else "なし",
+                  "| 海岸線", b.eval('groupOutline.getLayers()[0].getLatLngs().length'), "本")
+            ok = ok and not before and after and credit
+            b.eval('document.getElementById("basemap").value = "blank"; setBasemap("blank"); 0')
+
             # 3.4 使い方: 「?」で開き、× で閉じる
             b.eval('document.querySelector(".help-btn").click(); 0')
             opened = not b.eval('document.getElementById("help").hidden')

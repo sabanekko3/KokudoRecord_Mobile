@@ -18,7 +18,7 @@ PC 版（国道管理v2）とは CSV を書き出し・読み込みしてやり�
 PC に送って PC 版の `記録/` に置きます。逆に PC 版の routes.csv を「CSV を読み込む」で
 取り込めます（いまの記録は置き換わります）。
 
-背景の地図（国土地理院）はネットがあるときだけ出ます。圏外では「背景なし」にしてください。
+背景の地図（国土地理院）はネットがあるときだけ出ます。圏外では代わりに海岸線と県境を薄く描きます。
 ネットのあるときに見た範囲は、ブラウザの一時保存でしばらく圏外でも見えることがありますが、
 見ていない場所は白いままです。
 
@@ -27,7 +27,7 @@ PC に送って PC 版の `記録/` に置きます。逆に PC 版の routes.cs
 ビルド工程はありません。ファイルをそのまま配れば動きます。
 
 ```
-python tools/export_data.py     PC 版（../国道管理v2）の導出データから data/ を作る
+python tools/export_data.py     PC 版（https://github.com/sabanekko3/KokudoRecord）の導出データから data/ を作る
 python tools/compare.py         同じ routes.csv を PC 版と JS で解いて突き合わせる
 python tools/smoke.py           ヘッドレス Edge で起動と記録の操作を通す
 python -m http.server 8000      手元で開く（http://localhost:8000/）

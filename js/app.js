@@ -105,6 +105,34 @@ const map = L.map("map", { preferCanvas: true }).setView([37.0, 137.5], 6);
 map.attributionControl.setPrefix(false).addAttribution(OSM_CREDIT);
 let baseLayer = null;
 
+// ---- 海岸線と県境（オフライン用の下絵） ----------------------------------------
+// data/outline.json（国土地理院「地球地図日本」、tools/export_outline.py）を、タイルより上・
+// 国道の線より下の pane に描く。出すのは「背景なし」のとき、圏外のとき、背景のタイルが
+// 落ちてこないとき（機内モードで白地図のまま開いたときなど）。出典は出している間だけ付く
+const OUTLINE_CREDIT = "海岸線・県境: " + GSI_CREDIT + "（地球地図日本）";
+map.createPane("outlinePane").style.zIndex = 250;
+const outlineRenderer = L.canvas({ pane: "outlinePane", padding: 0.3 });
+const groupOutline = L.layerGroup();
+let tileTrouble = false;         // いまの背景のタイルが取れていない
+let tileErrors = 0;              // いま読んでいるひとまとまりのタイルで失敗した数
+
+function buildOutline(data) {
+  groupOutline.clearLayers();
+  const opts = { pane: "outlinePane", renderer: outlineRenderer, interactive: false, attribution: OUTLINE_CREDIT };
+  groupOutline.addLayer(L.polyline(data.coast.map(Graph.decodeLatLngs),
+    Object.assign({ color: "#7b8896", weight: 1.3, opacity: 0.95 }, opts)));
+  groupOutline.addLayer(L.polyline(data.pref.map(Graph.decodeLatLngs),
+    Object.assign({ color: "#9aa6b2", weight: 1.1, opacity: 0.95, dashArray: "4 3" }, opts)));
+  updateOutline();
+}
+function updateOutline() {
+  const want = $("showOutline").checked && (!baseLayer || !navigator.onLine || tileTrouble);
+  if (want && !map.hasLayer(groupOutline)) groupOutline.addTo(map);
+  else if (!want && map.hasLayer(groupOutline)) map.removeLayer(groupOutline);
+}
+window.addEventListener("online", updateOutline);
+window.addEventListener("offline", updateOutline);
+
 // 使い方。＋−の下に「?」を置き、#help を出す
 const HelpControl = L.Control.extend({
   onAdd: function () {
@@ -135,14 +163,26 @@ function setBasemap(key) {
   const spec = BASEMAPS[key] || BASEMAPS.none;
   $("map").style.background = key === "photo" ? "#2b2f33" : "#f5f7f9";
   try { localStorage.setItem("basemap", key); } catch (err) { /* 保存できなくてもよい */ }
-  if (!spec.url) return;
+  tileTrouble = false;
+  if (!spec.url) { updateOutline(); return; }
   baseLayer = L.tileLayer(spec.url, {
     attribution: "地図データ: " + GSI_CREDIT, maxZoom: 18,
     minNativeZoom: spec.minNativeZoom, maxNativeZoom: spec.maxNativeZoom,
     opacity: Number($("opacity").value) / 100
   });
+  // タイルが落ちてこなければ下絵を出し、ひとまとまり全部取れたら引っ込める
+  baseLayer.on("loading", () => { tileErrors = 0; });
+  baseLayer.on("tileerror", () => {
+    tileErrors++;
+    if (!tileTrouble) { tileTrouble = true; updateOutline(); }
+  });
+  baseLayer.on("load", () => {
+    const bad = tileErrors > 0;
+    if (bad !== tileTrouble) { tileTrouble = bad; updateOutline(); }
+  });
   baseLayer.addTo(map);
   baseLayer.bringToBack();
+  updateOutline();
 }
 
 // 線も道の駅も1枚のキャンバスに描く。pane を分けると上のキャンバスが下の線への
@@ -1046,6 +1086,7 @@ async function main() {
   $("showTodo").addEventListener("change", () => { stackLayers(); refreshSelection(); });
   $("showEki").addEventListener("change", stackLayers);
   $("showNodes").addEventListener("change", drawLabels);
+  $("showOutline").addEventListener("change", updateOutline);
   $("menuBtn").addEventListener("click", () => {
     const open = $("menu").hidden;
     $("menu").hidden = !open;
@@ -1070,10 +1111,11 @@ async function main() {
 
   // データ
   $("detail").textContent = "地図のデータを読んでいます…";
-  const [index, lines, nodes, eki] = await Promise.all([
+  const [index, lines, nodes, eki, outline] = await Promise.all([
     fetchJson("data/index.json"), fetchJson("data/lines.json"),
-    fetchJson("data/nodes.json"), fetchJson("data/eki.json")]);
+    fetchJson("data/nodes.json"), fetchJson("data/eki.json"), fetchJson("data/outline.json")]);
   INDEX = index; LINES = lines; NODES = nodes; EKI = eki; NAME_SEP = index.nameSep || NAME_SEP;
+  buildOutline(outline);
   for (const r of INDEX.routes) routeIndex.set(r.ref, r);
   buildNodeIndex();
   dbg(`データ読み込み完了: ${INDEX.routes.length} 路線, 地点 ${NODES.length}, 道の駅 ${EKI.length}`);
