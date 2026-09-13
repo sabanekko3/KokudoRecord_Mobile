@@ -402,12 +402,21 @@ function render() {
       `<span class="meta"><span class="name">国道${s.ref}号</span><br><span class="sub">${sub}</span></span></button>` +
       (s.status === "done" ? "" : `<button class="btn full" type="button" data-full="${s.ref}" title="始点から終点まで全部を走破として記録する">全線走破</button>`);
     row.querySelector(".row-main").addEventListener("click", () => {
-      if (!selectRoute(s.ref)) { map.closePopup(); return; }
+      if (!selectRoute(s.ref)) {
+        map.closePopup();
+        if (!pending) showEdit("");
+        return;
+      }
       showMap();
       fitVisible(s.bounds);
       L.popup()
         .setLatLng([(s.bounds[0][0] + s.bounds[1][0]) / 2, (s.bounds[0][1] + s.bounds[1][1]) / 2])
         .setContent(popupHtml(s)).openOn(map);
+      // 記録の縁取りと同じく、帯の「閉じる」で選択を外せるようにする（区間の記録中は帯を奪わない）
+      if (!pending) {
+        showEdit(`国道${s.ref}号（${STATUS_LABEL[s.status]}　${s.doneKm.toLocaleString()} / ${s.km.toLocaleString()} km）` +
+                 `を縁取りしています${CLOSE}`);
+      }
     });
     frag.appendChild(row);
   }
@@ -857,8 +866,10 @@ document.addEventListener("click", (ev) => {
   if (btn.hasAttribute("data-cancel")) {
     pending = null;
     showEdit("");
-    if (recActive !== null) {
+    // 記録か路線を縁取りしていたら、それも外す
+    if (recActive !== null || selectedRef !== null) {
       recActive = null; recHighlight = null; selectedRef = null;
+      map.closePopup();
       refreshSelection(); renderRecords();
     }
   } else if (btn.hasAttribute("data-eki")) {

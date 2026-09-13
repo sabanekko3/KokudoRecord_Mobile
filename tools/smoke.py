@@ -174,9 +174,13 @@ def main():
             print(f"full → 高さ {full[1]:.0f}px、一覧の高さ {full[2]:.0f}px")
             ok = ok and abs(full[1] - sheet["app"] * 0.92) < 3 and full[2] > sheet["app"] * 0.5
             b.eval('document.querySelector("#list .row .row-main").click(); 0'); time.sleep(0.4)
-            print("一覧の1行目を押す →", b.eval('sheetState'), "| 国道1号を選択:", b.eval('selectedRef'))
-            ok = ok and b.eval('sheetState') == "peek" and b.eval('selectedRef') == "1"
-            b.eval('selectRoute("1"); map.closePopup(); map.setView([37.0, 137.5], 6, { animate: false }); 0')
+            print("一覧の1行目を押す →", b.eval('sheetState'), "| 国道1号を選択:", b.eval('selectedRef'),
+                  "| 帯:", b.eval('document.getElementById("edit").textContent').strip()[:40])
+            ok = ok and b.eval('sheetState') == "peek" and b.eval('selectedRef') == "1" and "縁取り" in b.eval('document.getElementById("edit").textContent')
+            b.eval("""document.querySelector('#edit button[data-cancel]').click(); 0""")
+            print("帯の「閉じる」→ 選択:", b.eval('selectedRef'), "| 帯:", repr(b.eval('document.getElementById("edit").textContent')))
+            ok = ok and b.eval('selectedRef') is None and b.eval('document.getElementById("edit").textContent') == ""
+            b.eval('map.setView([37.0, 137.5], 6, { animate: false }); 0')
 
             # 4. 地図のクリック。ヘッドレスの Edge は pointer: coarse を真と言い、CDP の
             #    エミュレーションでは変えられないので、?pointer= で逆の値にして開き直す
